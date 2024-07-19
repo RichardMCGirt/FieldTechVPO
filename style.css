@@ -62,36 +62,37 @@ button:hover {
 
 table {
     border-collapse: collapse;
-    width: auto;
+    width: 100%;
     margin-top: 20px;
     background-color: #fff;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     max-width: 90%;
-  
 }
-td { max-width: 150px;
+
+td {
+    max-width: 150px;
     text-align: center;
     white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis; /* Display ellipsis (...) for overflowed text */}
+    text-overflow: ellipsis;
+}
 
-    th, td {
-        padding: 10px;
-        border: 1px solid #ddd;
-        text-align: center;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis; /* Display ellipsis (...) for overflowed text */
-        max-width: 300px; /* Adjust the maximum width of the cells */
-    }
-    
-    .description-cell {
-        max-width: 400px; /* Remove max-width constraint for Description of Work and Job Name */
-        white-space: normal; /* Allow text to wrap within the cell */
-        overflow: auto; /* Enable scrollbars when content exceeds cell dimensions */
-        height: auto; /* Allow the cell height to expand based on content */
-    }
-    
+th, td {
+    padding: 10px;
+    border: 1px solid #ddd;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 300px;
+}
+
+.description-cell {
+    max-width: 400px;
+    white-space: normal;
+    overflow: auto;
+    height: auto;
+}
 
 th {
     background-color: #24346c;
@@ -100,7 +101,7 @@ th {
     top: 0;
     z-index: 1;
     font-size: 22px;
-    padding: 5px 5px; 
+    padding: 5px 5px;
     font-weight: bold;
 }
 
@@ -164,40 +165,7 @@ tr:nth-child(odd) {
     position: fixed;
     bottom: 10px;
     left: 50%;
-    padding: 10px 20px;
-    background-color: #007bff; /* Button color */
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
-}
-
-.sticky-button:hover {
-    background-color: #0056b3;
-}
-
-#loadingMessage {
-    display: none;
-    font-size: 16px;
-    margin-top: 20px;
-}
-
-.hidden {
-    display: none;
-}
-
-.table-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-/* Add to the existing CSS file */
-.sticky-button {
-    position: fixed;
-    bottom: 10px;
-    left: 50%;
+    transform: translateX(-50%);
     padding: 10px 20px;
     background-color: #24346c;
     color: white;
@@ -225,4 +193,29 @@ tr:nth-child(odd) {
     display: flex;
     flex-direction: column;
     align-items: center;
+}
+
+/* Mobile Styles */
+@media only screen and (max-width: 600px) {
+    body {
+        padding: 10px;
+    }
+
+    .search-container {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    input[type="text"] {
+        width: calc(100% - 20px);
+    }
+
+    table, th, td {
+        font-size: 14px;
+        padding: 5px;
+    }
+
+    .sticky-button {
+        width: calc(100% - 20px);
+    }
 }
