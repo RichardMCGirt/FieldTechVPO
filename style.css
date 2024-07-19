@@ -32,14 +32,14 @@ input[type="text"] {
     font-size: 16px;
     border: 1px solid #ddd;
     border-radius: 5px;
-    width: 250px;
+    width: 200px;
     transition: all 0.3s ease-in-out;
 }
 
 input[type="text"]:focus {
     border-color: #24346c;
     box-shadow: 0 0 5px rgba(36, 52, 108, 0.5);
-    width: 50%;
+    width: 100%;
 }
 
 button {
@@ -69,7 +69,7 @@ table {
     max-width: 90%;
   
 }
-td { max-width: 200px;
+td { max-width: 150px;
     text-align: center;
     white-space: nowrap;
     overflow: hidden;
@@ -82,11 +82,11 @@ td { max-width: 200px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis; /* Display ellipsis (...) for overflowed text */
-        max-width: 400px; /* Adjust the maximum width of the cells */
+        max-width: 300px; /* Adjust the maximum width of the cells */
     }
     
     .description-cell {
-        max-width: none; /* Remove max-width constraint for Description of Work and Job Name */
+        max-width: 400px; /* Remove max-width constraint for Description of Work and Job Name */
         white-space: normal; /* Allow text to wrap within the cell */
         overflow: auto; /* Enable scrollbars when content exceeds cell dimensions */
         height: auto; /* Allow the cell height to expand based on content */

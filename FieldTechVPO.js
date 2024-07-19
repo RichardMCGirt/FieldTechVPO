@@ -6,7 +6,6 @@ document.addEventListener("DOMContentLoaded", async function () {
     const airtableTableName = 'tblO72Aw6qplOEAhR';
     const airtableEndpoint = `https://api.airtable.com/v0/${airtableBaseId}/${airtableTableName}`;
 
-    const dropboxAccessToken = 'sl.B5IoIcnEbvoYHLsRM5L721cg-owwK2WnS9GI1Cw6ZA1glc6JeClGtpte2tlYus4mK9lavdMFJMT-aTzIG3WdtolD3Xjlfe2nTOGK6Ylbl6vuIqqr4aOI6DDyn9NXt0uS1oPSwG3XWgQjkOM1wr5FoAE';
     axios.defaults.headers.common['Authorization'] = `Bearer ${airtableApiKey}`;
 
     
@@ -100,6 +99,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         const tableHeader = `
             <thead>
                 <tr>
+                    <th>Id Number</th>
                     <th>Vanir Office</th>
                     <th>Job Name</th>
                     <th>Description of Work</th>
@@ -142,6 +142,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
     function createRecordRow(record) {
         const recordRow = document.createElement('tr');
+        const IDNumber = record.fields['ID Number'] || '';
         const vanirOffice = record.fields['static Vanir Office'] || '';
         const jobName = record.fields['Job Name'] || '';
         const fieldTechnician = record.fields['static Field Technician'] || '';
@@ -150,6 +151,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         const descriptionOfWork = record.descriptionOfWork || '';
 
         recordRow.innerHTML = `
+             <td>${IDNumber}</td>
             <td>${vanirOffice}</td>
             <td>${jobName}</td>
             <td>${descriptionOfWork}</td>
@@ -199,16 +201,20 @@ document.addEventListener("DOMContentLoaded", async function () {
     function handleFileSelection(event) {
         const fileInput = event.target;
         const recordId = fileInput.getAttribute('data-record-id');
-        const file = fileInput.files[0];
-
-        if (!file) return;
-
+        const file = fileInput.files[0]; // Get the first file from the input
+    
+        if (!file) {
+            console.warn(`No file selected for record ID ${recordId}.`);
+            return;
+        }
+    
         console.log(`File selected for record ID ${recordId}:`, file.name);
-
+    
         let fileData = JSON.parse(localStorage.getItem('fileData')) || {};
         fileData[recordId] = file;
         localStorage.setItem('fileData', JSON.stringify(fileData));
     }
+    
 
     async function submitUpdates() {
         console.log('Submitting updates...');
@@ -219,76 +225,64 @@ document.addEventListener("DOMContentLoaded", async function () {
             fields: {
                 'Field Tech Confirmed Job Complete': updates[id],
                 'Field Tech Confirmed Job Completed Date': new Date().toISOString(),
-                'Completed Photo(s)': '',
+                // 'Completed Photo(s)': '', // Remove or adjust based on Airtable schema
             },
         }));
-
+    
         if (updateArray.length === 0) {
             console.log('No changes to submit.');
             alert('No changes to submit.');
             return;
         }
-
-        const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-
-        async function patchWithRetry(url, data, retries = 5) {
-            let attempt = 0;
-            let success = false;
-            let response = null;
-
-            while (attempt < retries && !success) {
-                try {
-                    response = await axios.patch(url, data);
-                    success = true;
-                } catch (error) {
-                    if (error.response && error.response.status === 429) {
-                        attempt++;
-                        const waitTime = Math.pow(2, attempt) * 1000;
-                        console.log(`Rate limit exceeded. Retrying in ${waitTime / 1000} seconds...`);
-                        await delay(waitTime);
-                    } else {
-                        throw error;
-                    }
-                }
-            }
-
-            if (!success) {
-                throw new Error('Max retries reached. Failed to patch data.');
-            }
-
-            return response;
-        }
-
+    
         try {
-            const updatePromises = updateArray.map(update => {
+            const updatePromises = updateArray.map(async update => {
                 const recordId = update.id;
                 const file = fileData[recordId];
                 if (file) {
-                    return uploadFileToDropbox(file)
-                        .then(dropboxLink => {
-                            update.fields['Completed Photo(s)'] = dropboxLink;
-                            console.log(`Uploaded file for record ID ${recordId} to Dropbox. Link: ${dropboxLink}`);
-                        })
-                        .catch(error => {
-                            console.error(`Error uploading file for record ID ${recordId} to Dropbox:`, error);
-                        })
-                        .finally(() => {
-                            delete fileData[recordId];
-                            localStorage.setItem('fileData', JSON.stringify(fileData));
-                        });
-                } else {
-                    console.warn(`No file selected for record ID ${recordId}.`);
-                    return Promise.resolve();
+                    const formData = new FormData();
+                    formData.append('attachments', file);
+    
+                    const response = await fetch(`${airtableEndpoint}/${recordId}`, {
+                        method: 'PATCH',
+                        headers: {
+                            Authorization: `Bearer ${airtableApiKey}`
+                        },
+                        body: formData
+                    });
+    
+                    if (!response.ok) {
+                        throw new Error(`Failed to upload file to Airtable for record ID ${recordId}. Status: ${response.status} ${response.statusText}`);
+                    }
+    
+                    const responseData = await response.json();
+                    console.log(`Uploaded file for record ID ${recordId} to Airtable. Response:`, responseData);
+    
+                    // Adjust based on your Airtable field name for attachments
+                    update.fields['Completed Photo(s)'] = responseData.fields['Attachments'];
+                    delete fileData[recordId]; // Remove file from local storage after successful upload
                 }
+    
+                const patchUrl = `${airtableEndpoint}/${recordId}`;
+                const patchResponse = await axios.patch(patchUrl, update.fields, {
+                    headers: {
+                        Authorization: `Bearer ${airtableApiKey}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+    
+                console.log(`Updated record ID ${recordId} in Airtable. Response:`, patchResponse.data);
+                return patchResponse.data;
             });
-
+    
             showLoadingMessage();
             console.log('Submitting updates to Airtable...', updatePromises);
-            await Promise.all(updatePromises.map(p => p.catch(e => e))); // Ensure all promises are resolved, even if some fail
+            await Promise.all(updatePromises);
             console.log('Records updated successfully');
             alert('Records updated successfully.');
-
+    
             localStorage.removeItem('updates');
+            localStorage.removeItem('fileData');
             document.getElementById('loadingMessage').innerText = 'Values have been submitted. Repopulating table...';
             await fetchUncheckedRecords();
         } catch (error) {
@@ -298,54 +292,16 @@ document.addEventListener("DOMContentLoaded", async function () {
             hideLoadingMessage();
         }
     }
-
-    async function uploadFileToDropbox(file) {
-        try {
-            console.log(`Uploading file to Dropbox: ${file.name}`);
     
-            // Obtain Dropbox access token
-            const token = await getDropboxAccessToken();
     
-            // Construct Dropbox API upload URL
-            const url = 'https://content.dropboxapi.com/2/files/upload';
-            const headers = {
-                Authorization: `Bearer ${token}`,
-                'Dropbox-API-Arg': JSON.stringify({
-                    path: `/uploads/${file.name}`,
-                    mode: 'add',
-                    autorename: true,
-                    mute: false
-                }),
-                'Content-Type': 'application/octet-stream',
-            };
-    
-            // Perform the file upload to Dropbox
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: headers,
-                body: file
-            });
-    
-            if (!response.ok) {
-                throw new Error(`Failed to upload file to Dropbox. Status: ${response.status} ${response.statusText}`);
-            }
-    
-            const responseData = await response.json();
-            console.log('Dropbox upload response:', responseData);
-    
-            return responseData.path_display;
-        } catch (error) {
-            console.error(`Error uploading file to Dropbox:`, error);
-            throw error; // Rethrow the error to propagate it up the call stack
-        }
-    }
-
+   
     function filterRecords() {
         const searchTerm = document.getElementById('searchBar').value.toLowerCase();
         const filteredRecords = allRecords.filter(record => {
             const vanirOffice = (record.fields['static Vanir Office'] || '').toLowerCase();
             const jobName = (record.fields['Job Name'] || '').toLowerCase();
             const fieldTechnician = (record.fields['static Field Technician'] || '').toLowerCase();
+            const IDNumber = (record.fields['ID Number'] || '').toLowerCase();
             return vanirOffice.includes(searchTerm) || jobName.includes(searchTerm) || fieldTechnician.includes(searchTerm);
         });
         displayRecords(filteredRecords);
