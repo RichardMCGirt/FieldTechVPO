@@ -8,7 +8,6 @@ document.addEventListener("DOMContentLoaded", async function () {
 
     axios.defaults.headers.common['Authorization'] = `Bearer ${airtableApiKey}`;
 
-    
     let allRecords = [];
 
     async function fetchAllRecords() {
@@ -17,19 +16,13 @@ document.addEventListener("DOMContentLoaded", async function () {
         let offset = null;
 
         do {
-            const response = await fetch(`${airtableEndpoint}?${new URLSearchParams({ offset })}`, {
-                headers: {
-                    Authorization: `Bearer ${airtableApiKey}`
-                }
-            });
-
-            const data = await response.json();
-            records = records.concat(data.records.map(record => ({
+            const response = await axios.get(`${airtableEndpoint}?${new URLSearchParams({ offset })}`);
+            records = records.concat(response.data.records.map(record => ({
                 id: record.id,
                 fields: record.fields,
                 descriptionOfWork: record.fields['Description of Work']
             })));
-            offset = data.offset;
+            offset = response.data.offset;
         } while (offset);
 
         console.log(`Total records fetched: ${records.length}`);
@@ -151,7 +144,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         const descriptionOfWork = record.descriptionOfWork || '';
 
         recordRow.innerHTML = `
-             <td>${IDNumber}</td>
+            <td>${IDNumber}</td>
             <td>${vanirOffice}</td>
             <td>${jobName}</td>
             <td>${descriptionOfWork}</td>
@@ -214,7 +207,6 @@ document.addEventListener("DOMContentLoaded", async function () {
         fileData[recordId] = file;
         localStorage.setItem('fileData', JSON.stringify(fileData));
     }
-    
 
     async function submitUpdates() {
         console.log('Submitting updates...');
@@ -225,62 +217,58 @@ document.addEventListener("DOMContentLoaded", async function () {
             fields: {
                 'Field Tech Confirmed Job Complete': updates[id],
                 'Field Tech Confirmed Job Completed Date': new Date().toISOString(),
-                // 'Completed Photo(s)': '', // Remove or adjust based on Airtable schema
             },
         }));
-    
+
         if (updateArray.length === 0) {
             console.log('No changes to submit.');
             alert('No changes to submit.');
             return;
         }
-    
+
         try {
             const updatePromises = updateArray.map(async update => {
                 const recordId = update.id;
                 const file = fileData[recordId];
                 if (file) {
                     const formData = new FormData();
-                    formData.append('attachments', file);
-    
-                    const response = await fetch(`${airtableEndpoint}/${recordId}`, {
-                        method: 'PATCH',
+                    formData.append('Completed Photo(s)', file);
+
+                    const response = await axios.patch(`${airtableEndpoint}/${recordId}`, formData, {
                         headers: {
                             Authorization: `Bearer ${airtableApiKey}`
-                        },
-                        body: formData
+                        }
                     });
-    
-                    if (!response.ok) {
+
+                    if (response.status !== 200) {
                         throw new Error(`Failed to upload file to Airtable for record ID ${recordId}. Status: ${response.status} ${response.statusText}`);
                     }
-    
-                    const responseData = await response.json();
+
+                    const responseData = response.data;
                     console.log(`Uploaded file for record ID ${recordId} to Airtable. Response:`, responseData);
-    
-                    // Adjust based on your Airtable field name for attachments
-                    update.fields['Completed Photo(s)'] = responseData.fields['Attachments'];
+
+                    update.fields['Completed Photo(s)'] = responseData.fields['Completed Photo(s)'];
                     delete fileData[recordId]; // Remove file from local storage after successful upload
                 }
-    
+
                 const patchUrl = `${airtableEndpoint}/${recordId}`;
-                const patchResponse = await axios.patch(patchUrl, update.fields, {
+                const patchResponse = await axios.patch(patchUrl, update, {
                     headers: {
                         Authorization: `Bearer ${airtableApiKey}`,
                         'Content-Type': 'application/json'
                     }
                 });
-    
+
                 console.log(`Updated record ID ${recordId} in Airtable. Response:`, patchResponse.data);
                 return patchResponse.data;
             });
-    
+
             showLoadingMessage();
             console.log('Submitting updates to Airtable...', updatePromises);
             await Promise.all(updatePromises);
             console.log('Records updated successfully');
             alert('Records updated successfully.');
-    
+
             localStorage.removeItem('updates');
             localStorage.removeItem('fileData');
             document.getElementById('loadingMessage').innerText = 'Values have been submitted. Repopulating table...';
@@ -292,17 +280,15 @@ document.addEventListener("DOMContentLoaded", async function () {
             hideLoadingMessage();
         }
     }
-    
-    
-   
+
     function filterRecords() {
         const searchTerm = document.getElementById('searchBar').value.toLowerCase();
         const filteredRecords = allRecords.filter(record => {
             const vanirOffice = (record.fields['static Vanir Office'] || '').toLowerCase();
             const jobName = (record.fields['Job Name'] || '').toLowerCase();
             const fieldTechnician = (record.fields['static Field Technician'] || '').toLowerCase();
-            const IDNumber = (record.fields['ID Number'] || '').toLowerCase();
-            return vanirOffice.includes(searchTerm) || jobName.includes(searchTerm) || fieldTechnician.includes(searchTerm);
+            const IDNumber = (record.fields['ID Number'] || '').toString().toLowerCase();
+            return vanirOffice.includes(searchTerm) || jobName.includes(searchTerm) || fieldTechnician.includes(searchTerm) || IDNumber.includes(searchTerm);
         });
         displayRecords(filteredRecords);
     }
