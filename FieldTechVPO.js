@@ -9,6 +9,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     axios.defaults.headers.common['Authorization'] = `Bearer ${airtableApiKey}`;
 
     let allRecords = [];
+    let previousUpdates = {}; // To store the previous state of updates for undo
 
     async function fetchAllRecords() {
         console.log('Fetching all records from Airtable...');
@@ -65,6 +66,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         document.getElementById('submitUpdates').classList.add('hidden');
         document.getElementById('searchBar').classList.add('hidden');
         document.getElementById('searchBarTitle').classList.add('hidden');
+        document.getElementById('undoButton').classList.add('hidden');
     }
 
     function hideLoadingMessage() {
@@ -74,6 +76,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         document.getElementById('submitUpdates').classList.remove('hidden');
         document.getElementById('searchBar').classList.remove('hidden');
         document.getElementById('searchBarTitle').classList.remove('hidden');
+        document.getElementById('undoButton').classList.remove('hidden');
     }
 
     function displayRecords(records) {
@@ -226,15 +229,17 @@ document.addEventListener("DOMContentLoaded", async function () {
             return;
         }
 
+        previousUpdates = { ...updates }; // Store the current updates for undo functionality
+
         try {
             const updatePromises = updateArray.map(async update => {
                 const recordId = update.id;
                 const file = fileData[recordId];
                 if (file) {
                     const formData = new FormData();
-                    formData.append('Completed Photo(s)', file);
+                    formData.append('attachments', file);
 
-                    const response = await axios.patch(`${airtableEndpoint}/${recordId}`, formData, {
+                    const response = await axios.post(`${airtableEndpoint}/${recordId}/attachments`, formData, {
                         headers: {
                             Authorization: `Bearer ${airtableApiKey}`
                         }
@@ -252,7 +257,7 @@ document.addEventListener("DOMContentLoaded", async function () {
                 }
 
                 const patchUrl = `${airtableEndpoint}/${recordId}`;
-                const patchResponse = await axios.patch(patchUrl, update, {
+                const patchResponse = await axios.patch(patchUrl, { fields: update.fields }, {
                     headers: {
                         Authorization: `Bearer ${airtableApiKey}`,
                         'Content-Type': 'application/json'
@@ -274,8 +279,51 @@ document.addEventListener("DOMContentLoaded", async function () {
             document.getElementById('loadingMessage').innerText = 'Values have been submitted. Repopulating table...';
             await fetchUncheckedRecords();
         } catch (error) {
-            console.error('Error updating records:', error);
-            alert('Error updating records. Check the console for more details.');
+            console.error('Error updating records:', error.response ? error.response.data : error.message);
+            alert(`Error updating records. ${error.response ? error.response.data.error.message : error.message}`);
+        } finally {
+            hideLoadingMessage();
+        }
+    }
+
+    async function undoUpdates() {
+        console.log('Undoing updates...');
+        if (Object.keys(previousUpdates).length === 0) {
+            alert('No updates to undo.');
+            return;
+        }
+
+        const undoPromises = Object.keys(previousUpdates).map(async id => {
+            const update = {
+                fields: {
+                    'Field Tech Confirmed Job Complete': false,
+                    'Field Tech Confirmed Job Completed Date': null,
+                },
+            };
+
+            const patchUrl = `${airtableEndpoint}/${id}`;
+            const patchResponse = await axios.patch(patchUrl, update, {
+                headers: {
+                    Authorization: `Bearer ${airtableApiKey}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            console.log(`Undone update for record ID ${id}. Response:`, patchResponse.data);
+            return patchResponse.data;
+        });
+
+        try {
+            showLoadingMessage();
+            await Promise.all(undoPromises);
+            console.log('Updates undone successfully');
+            alert('Updates undone successfully.');
+
+            previousUpdates = {}; // Clear previous updates
+            await fetchUncheckedRecords();
+        } catch (error) {
+            console.error('Error undoing updates:', error.response ? error.response.data : error.message);
+            alert(`Error undoing updates. ${error.response ? error.response.data.error.message : error.message}`);
         } finally {
             hideLoadingMessage();
         }
@@ -305,4 +353,5 @@ document.addEventListener("DOMContentLoaded", async function () {
 
     document.getElementById('submitUpdates').addEventListener('click', submitUpdates);
     document.getElementById('searchButton').addEventListener('click', filterRecords);
+    document.getElementById('undoButton').addEventListener('click', undoUpdates);
 });
