@@ -60,7 +60,23 @@ button:hover {
     transform: translateY(-2px);
 }
 
+.table-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-x: auto;
+    width: 100%; /* Ensure the container takes full width */
+}
 
+table {
+    border-collapse: collapse;
+    width: 90%; /* Adjust width to keep some margin on desktop */
+    margin: 20px auto; /* Center the table */
+    background-color: #fff;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    overflow-x: auto;
+    display: block; /* Enable horizontal scrolling */
+}
 
 td {
     max-width: 150px;
@@ -178,17 +194,6 @@ tr:nth-child(odd) {
     margin-top: 20px;
 }
 
-table {
-    border-collapse: collapse;
-    width: 100%;
-    margin-top: 20px;
-    background-color: #fff;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    max-width: 100%;
-    overflow-x: auto;
-    display: block; /* Added to enable horizontal scrolling */
-}
-
 .table-container {
     display: flex;
     flex-direction: column;
@@ -197,11 +202,12 @@ table {
     width: 100%; /* Ensure the container takes full width */
 }
 
+/* Add to the existing CSS file */
 .button-container {
     display: flex;
     gap: 10px;
     position: fixed;
-    bottom: 30px;
+    bottom: 10px;
     left: 50%;
     transform: translateX(-50%);
 }
@@ -235,10 +241,8 @@ table {
         flex-direction: row;
         align-items: center;
         gap: 10px;
-        position: fixed;
-        bottom: 10px;
-        left: 50%;
-        transform: translateX(-50%);
+        position: sticky;
+        bottom: 0;
     }
 }
 
