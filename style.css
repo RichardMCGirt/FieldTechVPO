@@ -237,7 +237,7 @@ tr:nth-child(odd) {
     }
 
     .button-container {
-        width: calc(100% - 20px);
+        width: calc(50% - 20px);
         flex-direction: row;
         align-items: center;
         gap: 10px;
