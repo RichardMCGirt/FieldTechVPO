@@ -217,7 +217,7 @@ tr:nth-child(odd) {
 
     .search-container {
         flex-direction: column;
-        width: 100%;
+        width: 80%;
     }
 
     input[type="text"] {
