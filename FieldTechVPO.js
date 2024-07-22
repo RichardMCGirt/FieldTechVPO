@@ -101,7 +101,7 @@ document.addEventListener("DOMContentLoaded", async function () {
                     <th>Description of Work</th>
                     <th>Field Technician</th>
                     <th>Confirmed Complete</th>
-                    <th>Completed Photo(s)</th>
+                    <!-- <th>Completed Photo(s)</th> -->
                 </tr>
             </thead>
             <tbody>
@@ -145,12 +145,12 @@ document.addEventListener("DOMContentLoaded", async function () {
         const fieldTechConfirmedComplete = record.fields['Field Tech Confirmed Job Complete'];
         const checkboxValue = fieldTechConfirmedComplete ? 'checked' : '';
         const descriptionOfWork = record.descriptionOfWork || '';
-
+    
         recordRow.innerHTML = `
             <td>${IDNumber}</td>
             <td>${vanirOffice}</td>
             <td>${jobName}</td>
-            <td>${descriptionOfWork}</td>
+            <td class="description-cell">${descriptionOfWork}</td>
             <td>${fieldTechnician}</td>
             <td>
                 <label class="custom-checkbox">
@@ -158,16 +158,16 @@ document.addEventListener("DOMContentLoaded", async function () {
                     <span class="checkmark"></span>
                 </label>
             </td>
-            <td>
+            <!-- <td>
                 <input type="file" class="file-upload hidden" data-record-id="${record.id}">
-            </td>
+            </td> -->
         `;
-
+    
         const checkbox = recordRow.querySelector('input[type="checkbox"]');
-        const fileInput = recordRow.querySelector('.file-upload');
+        // const fileInput = recordRow.querySelector('.file-upload');
         checkbox.addEventListener('change', handleCheckboxChange);
-        fileInput.addEventListener('change', handleFileSelection);
-
+        // fileInput.addEventListener('change', handleFileSelection);
+    
         console.log(`Created row for record ID ${record.id}:`, record);
         return recordRow;
     }
@@ -176,40 +176,40 @@ document.addEventListener("DOMContentLoaded", async function () {
         const checkbox = event.target;
         const recordId = checkbox.getAttribute('data-record-id');
         const isChecked = checkbox.checked;
-        const fileInput = document.querySelector(`input.file-upload[data-record-id="${recordId}"]`);
+        // const fileInput = document.querySelector(`input.file-upload[data-record-id="${recordId}"]`);
 
         let updates = JSON.parse(localStorage.getItem('updates')) || {};
 
         if (isChecked) {
             updates[recordId] = true;
-            fileInput.classList.remove('hidden');
-            console.log(`Checkbox checked for record ID ${recordId}. Showing file input.`);
+            // fileInput.classList.remove('hidden');
+            console.log(`Checkbox checked for record ID ${recordId}.`);
         } else {
             delete updates[recordId];
-            fileInput.classList.add('hidden');
-            console.log(`Checkbox unchecked for record ID ${recordId}. Hiding file input.`);
+            // fileInput.classList.add('hidden');
+            console.log(`Checkbox unchecked for record ID ${recordId}.`);
         }
 
         localStorage.setItem('updates', JSON.stringify(updates));
         console.log('Current updates:', updates);
     }
 
-    function handleFileSelection(event) {
-        const fileInput = event.target;
-        const recordId = fileInput.getAttribute('data-record-id');
-        const file = fileInput.files[0]; // Get the first file from the input
+    // function handleFileSelection(event) {
+    //     const fileInput = event.target;
+    //     const recordId = fileInput.getAttribute('data-record-id');
+    //     const file = fileInput.files[0]; // Get the first file from the input
     
-        if (!file) {
-            console.warn(`No file selected for record ID ${recordId}.`);
-            return;
-        }
+    //     if (!file) {
+    //         console.warn(`No file selected for record ID ${recordId}.`);
+    //         return;
+    //     }
     
-        console.log(`File selected for record ID ${recordId}:`, file.name);
+    //     console.log(`File selected for record ID ${recordId}:`, file.name);
     
-        let fileData = JSON.parse(localStorage.getItem('fileData')) || {};
-        fileData[recordId] = file;
-        localStorage.setItem('fileData', JSON.stringify(fileData));
-    }
+    //     let fileData = JSON.parse(localStorage.getItem('fileData')) || {};
+    //     fileData[recordId] = file;
+    //     localStorage.setItem('fileData', JSON.stringify(fileData));
+    // }
 
     async function submitUpdates() {
         console.log('Submitting updates...');
@@ -234,27 +234,27 @@ document.addEventListener("DOMContentLoaded", async function () {
         try {
             const updatePromises = updateArray.map(async update => {
                 const recordId = update.id;
-                const file = fileData[recordId];
-                if (file) {
-                    const formData = new FormData();
-                    formData.append('attachments', file);
+                // const file = fileData[recordId];
+                // if (file) {
+                //     const formData = new FormData();
+                //     formData.append('attachments', file);
 
-                    const response = await axios.post(`${airtableEndpoint}/${recordId}/attachments`, formData, {
-                        headers: {
-                            Authorization: `Bearer ${airtableApiKey}`
-                        }
-                    });
+                //     const response = await axios.post(`${airtableEndpoint}/${recordId}/attachments`, formData, {
+                //         headers: {
+                //             Authorization: `Bearer ${airtableApiKey}`
+                //         }
+                //     });
 
-                    if (response.status !== 200) {
-                        throw new Error(`Failed to upload file to Airtable for record ID ${recordId}. Status: ${response.status} ${response.statusText}`);
-                    }
+                //     if (response.status !== 200) {
+                //         throw new Error(`Failed to upload file to Airtable for record ID ${recordId}. Status: ${response.status} ${response.statusText}`);
+                //     }
 
-                    const responseData = response.data;
-                    console.log(`Uploaded file for record ID ${recordId} to Airtable. Response:`, responseData);
+                //     const responseData = response.data;
+                //     console.log(`Uploaded file for record ID ${recordId} to Airtable. Response:`, responseData);
 
-                    update.fields['Completed Photo(s)'] = responseData.fields['Completed Photo(s)'];
-                    delete fileData[recordId]; // Remove file from local storage after successful upload
-                }
+                //     update.fields['Completed Photo(s)'] = responseData.fields['Completed Photo(s)'];
+                //     delete fileData[recordId]; // Remove file from local storage after successful upload
+                // }
 
                 const patchUrl = `${airtableEndpoint}/${recordId}`;
                 const patchResponse = await axios.patch(patchUrl, { fields: update.fields }, {

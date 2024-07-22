@@ -67,6 +67,7 @@ table {
     background-color: #fff;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     max-width: 90%;
+    overflow-x: auto;
 }
 
 td {
@@ -229,8 +230,8 @@ tr:nth-child(odd) {
         width: calc(100% - 20px);
         flex-direction: column;
         align-items: center;
-        gap: 500px;
+        gap: 10px;
         position: sticky;
-        
+        bottom: 0;
     }
 }
